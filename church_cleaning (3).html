@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>교회 청소 출석체크</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sky:#e8f4fd;--sky-mid:#bde0f7;--blue:#2b7fc1;--blue-dark:#1a5a8f;
+    --gold:#c9972b;--gold-light:#f5e4b8;--white:#fff;--gray-light:#f4f6f9;
+    --gray-mid:#c8d2de;--gray:#8a9ab0;--text:#1e2d3d;--text-soft:#5a6e82;
+    --success:#2e9e6b;--danger:#d94f4f;--sub:#7b5ea7;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Noto Sans KR',sans-serif;background:linear-gradient(160deg,#dceefb 0%,#f0f7ff 40%,#fdf6e8 100%);min-height:100vh;color:var(--text);}
+
+  header{background:linear-gradient(135deg,var(--blue-dark) 0%,var(--blue) 60%,#4a9fd4 100%);color:white;padding:24px 20px 14px;text-align:center;position:relative;overflow:hidden;box-shadow:0 4px 18px rgba(27,90,143,0.25);}
+  header::before{content:'✝';position:absolute;font-size:120px;opacity:0.06;top:-20px;right:-10px;line-height:1;}
+  header h1{font-size:1.45rem;font-weight:900;letter-spacing:-0.5px;}
+  header p{font-size:0.8rem;opacity:0.82;margin-top:3px;font-weight:300;}
+
+  #syncBar{display:flex;align-items:center;justify-content:center;gap:7px;padding:7px 16px 3px;font-size:0.75rem;font-weight:600;}
+  .sdot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .s-on{background:#22c55e;box-shadow:0 0 0 2px rgba(34,197,94,.25);}
+  .s-off{background:#f59e0b;}
+  .s-err{background:#ef4444;}
+  .t-on{color:#15803d;}.t-off{color:#b45309;}.t-err{color:#b91c1c;}
+
+  .week-nav{display:flex;align-items:center;justify-content:center;gap:14px;padding:12px 20px 6px;}
+  .week-nav button{background:var(--white);border:1.5px solid var(--sky-mid);border-radius:50%;width:36px;height:36px;font-size:1.1rem;cursor:pointer;color:var(--blue);transition:all .15s;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(43,127,193,.10);}
+  .week-nav button:hover{background:var(--blue);color:white;}
+  .week-label{font-size:1.05rem;font-weight:700;color:var(--blue-dark);min-width:170px;text-align:center;}
+  .team-badge{font-size:.72rem;font-weight:700;padding:3px 10px;border-radius:20px;display:inline-block;margin-top:2px;}
+  .badge-1{background:#dbeafe;color:#1d4ed8;}.badge-2{background:#ede9fe;color:#6d28d9;}
+
+  .section-wrap{padding:10px 16px 0;display:flex;flex-direction:column;gap:12px;}
+  .team-section{background:var(--white);border-radius:16px;box-shadow:0 2px 10px rgba(43,127,193,.08);overflow:hidden;border:1.5px solid var(--sky-mid);}
+  .team-section.inactive{opacity:.45;filter:grayscale(.3);pointer-events:none;}
+  .leader-section{background:var(--white);border-radius:16px;box-shadow:0 2px 10px rgba(201,151,43,.10);border:1.5px solid var(--gold-light);overflow:hidden;}
+  .team-header{display:flex;align-items:center;gap:10px;padding:12px 16px 10px;border-bottom:1px solid var(--sky);font-weight:700;font-size:.95rem;color:var(--blue-dark);}
+  .icon{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;}
+  .icon-1{background:#dbeafe;color:#1d4ed8;}.icon-2{background:#ede9fe;color:#6d28d9;}.icon-lead{background:var(--gold-light);color:var(--gold);}
+  .duty-tag{margin-left:auto;font-size:.68rem;font-weight:700;padding:3px 9px;border-radius:20px;}
+  .duty-on{background:#dcfce7;color:#15803d;}.duty-off{background:var(--gray-light);color:var(--gray);}
+  .member-row{display:flex;align-items:center;padding:10px 16px;border-bottom:1px solid var(--gray-light);gap:10px;transition:background .12s;}
+  .member-row:last-child{border-bottom:none;}.member-row:hover{background:#f7fbff;}
+  .member-name{font-size:.9rem;font-weight:500;min-width:58px;}
+  .role-dot{font-size:.63rem;padding:1px 7px;border-radius:10px;margin-left:2px;font-weight:600;}
+  .role-lead{background:var(--gold-light);color:var(--gold);}.role-member{background:var(--sky);color:var(--blue);}
+  .check-area{display:flex;align-items:center;gap:7px;margin-left:auto;flex-wrap:nowrap;}
+  .btn-check{padding:5px 11px;border-radius:8px;border:1.5px solid;font-size:.8rem;font-weight:700;cursor:pointer;transition:all .15s;background:white;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;}
+  .btn-o{border-color:var(--success);color:var(--success);}.btn-o.active{background:var(--success);color:white;}
+  .btn-x{border-color:var(--danger);color:var(--danger);}.btn-x.active{background:var(--danger);color:white;}
+  .sub-input-wrap{position:relative;flex:1;min-width:0;}
+  .sub-input{width:100%;padding:5px 10px;border-radius:8px;border:1.5px solid var(--gray-mid);font-size:.76rem;font-family:'Noto Sans KR',sans-serif;color:var(--text);background:var(--gray-light);transition:border .15s;min-width:78px;}
+  .sub-input::placeholder{color:#b0bec9;font-size:.72rem;}
+  .sub-input:focus{outline:none;border-color:var(--sub);background:white;}
+  .sub-input.filled{background:#f3eeff;border-color:var(--sub);}
+
+  .summary-section{margin:14px 16px 28px;background:white;border-radius:16px;box-shadow:0 2px 10px rgba(43,127,193,.08);border:1.5px solid var(--sky-mid);overflow:hidden;}
+  .summary-header{background:linear-gradient(90deg,var(--blue-dark) 0%,var(--blue) 100%);color:white;padding:12px 18px;font-weight:700;font-size:.93rem;display:flex;align-items:center;gap:8px;}
+  .summary-list{padding:12px 16px;display:flex;flex-direction:column;gap:7px;}
+  .summary-empty{color:var(--gray);font-size:.83rem;text-align:center;padding:8px 0 2px;}
+  .summary-item{display:flex;align-items:center;justify-content:space-between;padding:8px 13px;border-radius:10px;font-size:.86rem;}
+  .s-name{font-weight:600;}
+  .s-badge{font-size:.73rem;font-weight:700;padding:3px 10px;border-radius:20px;}
+  .s-o{background:#dcfce7;color:#15803d;}.s-x{background:#fee2e2;color:#b91c1c;}.s-sub{background:#ede9fe;color:#6d28d9;}
+  .row-o{background:#f0fdf4;}.row-x{background:#fff5f5;}.row-sub{background:#f5f3ff;}
+  .count-bar{display:flex;gap:14px;padding:9px 16px 13px;border-top:1px solid var(--gray-light);font-size:.8rem;color:var(--text-soft);font-weight:500;}
+  .count-bar span{display:flex;align-items:center;gap:4px;}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block;}
+  .dot-o{background:var(--success);}.dot-x{background:var(--danger);}.dot-sub{background:var(--sub);}
+
+  #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e2d3d;color:white;padding:10px 20px;border-radius:12px;font-size:.8rem;font-weight:600;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;max-width:88vw;text-align:center;white-space:pre-line;}
+  #toast.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>✝ 청소 출석체크</h1>
+  <p>매주 일요일 · 격주 조 편성</p>
+</header>
+
+<div id="syncBar">
+  <span class="sdot s-off" id="syncDot"></span>
+  <span id="syncText" class="t-off">서버 연결 중...</span>
+</div>
+
+<div class="week-nav">
+  <button id="prevBtn">&#8249;</button>
+  <div>
+    <div class="week-label" id="weekLabel"></div>
+    <div style="text-align:center;margin-top:3px;" id="teamBadge"></div>
+  </div>
+  <button id="nextBtn">&#8250;</button>
+</div>
+
+<div class="section-wrap">
+  <div class="leader-section">
+    <div class="team-header"><div class="icon icon-lead">👑</div>팀장 <span style="color:var(--gold);margin-left:2px;">조현민</span><span class="duty-tag duty-on" style="margin-left:auto;">매주 참여</span></div>
+    <div class="member-row" id="row-팀장-조현민"><span class="member-name">조현민</span><span class="role-dot role-lead">팀장</span><div class="check-area"><button class="btn-check btn-o" onclick="doToggle('팀장','조현민','O')">O</button><button class="btn-check btn-x" onclick="doToggle('팀장','조현민','X')">X</button><div class="sub-input-wrap"><input class="sub-input" id="sub-팀장-조현민" type="text" placeholder="대타 이름 입력" oninput="doSub('팀장','조현민',this)"></div></div></div>
+  </div>
+
+  <div class="team-section" id="team1">
+    <div class="team-header"><div class="icon icon-1">①</div>1조<span class="duty-tag" id="duty1" style="margin-left:auto;"></span></div>
+    <div class="member-row" id="row-1조-이정근"><span class="member-name">이정근</span><span class="role-dot role-lead">조장</span><div class="check-area"><button class="btn-check btn-o" onclick="doToggle('1조','이정근','O')">O</button><button class="btn-check btn-x" onclick="doToggle('1조','이정근','X')">X</button><div class="sub-input-wrap"><input class="sub-input" id="sub-1조-이정근" type="text" placeholder="예) 최섭(대타)" oninput="doSub('1조','이정근',this)"></div></div></div>
+    <div class="member-row" id="row-1조-박민우"><span class="member-name">박민우</span><span class="role-dot role-member">조원</span><div class="check-area"><button class="btn-check btn-o" onclick="doToggle('1조','박민우','O')">O</button><button class="btn-check btn-x" onclick="doToggle('1조','박민우','X')">X</button><div class="sub-input-wrap"><input class="sub-input" id="sub-1조-박민우" type="text" placeholder="예) 최섭(대타)" oninput="doSub('1조','박민우',this)"></div></div></div>
+    <div class="member-row" id="row-1조-김진영"><span class="member-name">김진영</span><span class="role-dot role-member">조원</span><div class="check-area"><button class="btn-check btn-o" onclick="doToggle('1조','김진영','O')">O</button><button class="btn-check btn-x" onclick="doToggle('1조','김진영','X')">X</button><div class="sub-input-wrap"><input class="sub-input" id="sub-1조-김진영" type="text" placeholder="예) 최섭(대타)" oninput="doSub('1조','김진영',this)"></div></div></div>
+    <div class="member-row" id="row-1조-김흥환"><span class="member-name">김흥환</span><span class="role-dot role-member">조원</span><div class="check-area"><button class="btn-check btn-o" onclick="doToggle('1조','김흥환','O')">O</button><button class="btn-check btn-x" onclick="doToggle('1조','김흥환','X')">X</button><div class="sub-input-wrap"><input class="sub-input" id="sub-1조-김흥환" type="text" placeholder="예) 최섭(대타)" oninput="doSub('1조','김흥환',this)"></div></div></div>
+    <div class="member-row" id="row-1조-윤기왕"><span class="member-name">윤기왕</span><span class="role-dot role-member">조원</span><div class="check-area"><button class="btn-check btn-o" onclick="doToggle('1조','윤기왕','O')">O</button><button class="btn-check btn-x" onclick="doToggle('1조','윤기왕','X')">X</button><div class="sub-input-wrap"><input class="sub-input" id="sub-1조-윤기왕" type="text" placeholder="예) 최섭(대타)" oninput="doSub('1조','윤기왕',this)"></div></div></div>
+    <div class="member-row" id="row-1조-장민재"><span class="member-name">장민재</span><span class="role-dot role-member">조원</span><div class="check-area"><button class="btn-check btn-o" onclick="doToggle('1조','장민재','O')">O</button><button class="btn-check btn-x" onclick="doToggle('1조','장민재','X')">X</button><div class="sub-input-wrap"><input class="sub-input" id="sub-1조-장민재" type="text" placeholder="예) 최섭(대타)" oninput="doSub('1조','장민재',this)"></div></div></div>
+  </div>
+
+  <div class="team-section" id="team2">
+    <div class="team-header"><div class="icon icon-2">②</div>2조<span class="duty-tag" id="duty2" style="margin-left:auto;"></span></div>
+    <div class="member-row" id="row-2조-최섭"><span class="member-name">최섭</span><span class="role-dot role-lead">조장</span><div class="check-area"><button class="btn-check btn-o" onclick="doToggle('2조','최섭','O')">O</button><button class="btn-check btn-x" onclick="doToggle('2조','최섭','X')">X</button><div class="sub-input-wrap"><input class="sub-input" id="sub-2조-최섭" type="text" placeholder="예) 이정근(대타)" oninput="doSub('2조','최섭',this)"></div></div></div>
+    <div class="member-row" id="row-2조-유환"><span class="member-name">유환</span><span class="role-dot role-member">조원</span><div class="check-area"><button class="btn-check btn-o" onclick="doToggle('2조','유환','O')">O</button><button class="btn-check btn-x" onclick="doToggle('2조','유환','X')">X</button><div class="sub-input-wrap"><input class="sub-input" id="sub-2조-유환" type="text" placeholder="예) 이정근(대타)" oninput="doSub('2조','유환',this)"></div></div></div>
+    <div class="member-row" id="row-2조-김이흘"><span class="member-name">김이흘</span><span class="role-dot role-member">조원</span><div class="check-area"><button class="btn-check btn-o" onclick="doToggle('2조','김이흘','O')">O</button><button class="btn-check btn-x" onclick="doToggle('2조','김이흘','X')">X</button><div class="sub-input-wrap"><input class="sub-input" id="sub-2조-김이흘" type="text" placeholder="예) 이정근(대타)" oninput="doSub('2조','김이흘',this)"></div></div></div>
+    <div class="member-row" id="row-2조-김영국"><span class="member-name">김영국</span><span class="role-dot role-member">조원</span><div class="check-area"><button class="btn-check btn-o" onclick="doToggle('2조','김영국','O')">O</button><button class="btn-check btn-x" onclick="doToggle('2조','김영국','X')">X</button><div class="sub-input-wrap"><input class="sub-input" id="sub-2조-김영국" type="text" placeholder="예) 이정근(대타)" oninput="doSub('2조','김영국',this)"></div></div></div>
+    <div class="member-row" id="row-2조-송진호"><span class="member-name">송진호</span><span class="role-dot role-member">조원</span><div class="check-area"><button class="btn-check btn-o" onclick="doToggle('2조','송진호','O')">O</button><button class="btn-check btn-x" onclick="doToggle('2조','송진호','X')">X</button><div class="sub-input-wrap"><input class="sub-input" id="sub-2조-송진호" type="text" placeholder="예) 이정근(대타)" oninput="doSub('2조','송진호',this)"></div></div></div>
+    <div class="member-row" id="row-2조-천성혁"><span class="member-name">천성혁</span><span class="role-dot role-member">조원</span><div class="check-area"><button class="btn-check btn-o" onclick="doToggle('2조','천성혁','O')">O</button><button class="btn-check btn-x" onclick="doToggle('2조','천성혁','X')">X</button><div class="sub-input-wrap"><input class="sub-input" id="sub-2조-천성혁" type="text" placeholder="예) 이정근(대타)" oninput="doSub('2조','천성혁',this)"></div></div></div>
+  </div>
+</div>
+
+<div class="summary-section">
+  <div class="summary-header">📋 참여현황 (실시간 반영)</div>
+  <div class="summary-list" id="summaryList"><div class="summary-empty">아직 입력된 내용이 없습니다.</div></div>
+  <div class="count-bar" id="countBar" style="display:none;">
+    <span><span class="dot dot-o"></span><span id="cntO">0</span>명 참여</span>
+    <span><span class="dot dot-x"></span><span id="cntX">0</span>명 불참</span>
+    <span><span class="dot dot-sub"></span><span id="cntS">0</span>명 대타</span>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── 서버 설정 (고정값) ────────────────────
+const API_KEY = '$2a$10$mdBoAm6DvWGgIEYeKxYmNuvQuEdsILcHmXrH//ujfyCkWFjsdf/sC';
+const BIN_ID  = '69cc789a36566621a8699cfe';
+const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+
+// ── 날짜 ─────────────────────────────────
+const BY=2025,BM=4,BD=5;
+let weekOffset=0;
+function getSunday(o){return new Date(Date.UTC(BY,BM-1,BD+o*7));}
+function wKey(o){const d=getSunday(o);return`${d.getUTCFullYear()}-${d.getUTCMonth()+1}-${d.getUTCDate()}`;}
+function fmtDate(d){return`${d.getUTCFullYear()}년 ${d.getUTCMonth()+1}월 ${d.getUTCDate()}일 (일)`;}
+function activeTeam(o){return((o%2)+2)%2===0?1:2;}
+function initOffset(){
+  const now=new Date();
+  weekOffset=Math.max(0,Math.floor((Date.UTC(now.getFullYear(),now.getMonth(),now.getDate())-Date.UTC(BY,BM-1,BD))/(7*864e5)));
+}
+
+// ── 멤버 ─────────────────────────────────
+const MEMBERS={'팀장':['조현민'],'1조':['이정근','박민우','김진영','김흥환','윤기왕','장민재'],'2조':['최섭','유환','김이흘','김영국','송진호','천성혁']};
+
+function emptyWeek(){
+  const o={};
+  for(const[t,ns]of Object.entries(MEMBERS)){o[t]={};for(const n of ns)o[t][n]={status:null,sub:''};}
+  return o;
+}
+
+// ── 전체 데이터 구조: { "2025-4-5": {...}, "2025-4-12": {...}, ... }
+let allData = {};
+let isSaving = false;
+let saveQueued = false;
+
+// ── JSONBin 전체 읽기 ─────────────────────
+async function loadAll() {
+  setSyncStatus('connecting');
+  try {
+    const r = await fetch(API_URL + '/latest', {
+      headers: { 'X-Master-Key': API_KEY }
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.message || '읽기 실패 ' + r.status);
+    // record가 주차 데이터 맵
+    allData = (j.record && typeof j.record === 'object' && !j.record.init) ? j.record : {};
+    setSyncStatus('on');
+    renderWeek();
+  } catch(e) {
+    console.error('[loadAll]', e);
+    setSyncStatus('error');
+    showToast('연결 실패: ' + e.message);
+    renderWeek();
+  }
+}
+
+// ── JSONBin 전체 저장 ─────────────────────
+async function saveAll() {
+  if (isSaving) { saveQueued = true; return; }
+  isSaving = true;
+  try {
+    const r = await fetch(API_URL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
+      body: JSON.stringify(allData)
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.message || '저장 실패 ' + r.status);
+    setSyncStatus('on');
+  } catch(e) {
+    console.error('[saveAll]', e);
+    setSyncStatus('error');
+    showToast('저장 실패: ' + e.message);
+  } finally {
+    isSaving = false;
+    if (saveQueued) { saveQueued = false; saveAll(); }
+  }
+}
+
+let saveTimer = null;
+function debouncedSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveAll, 600);
+}
+
+// ── 5초 폴링 (다른 기기 반영) ─────────────
+let pollTimer = null;
+function startPoll() {
+  stopPoll();
+  pollTimer = setInterval(async () => {
+    try {
+      const r = await fetch(API_URL + '/latest', { headers: { 'X-Master-Key': API_KEY } });
+      const j = await r.json();
+      if (r.ok && j.record && !j.record.init) {
+        allData = j.record;
+        setSyncStatus('on');
+        renderWeek();
+      }
+    } catch {}
+  }, 5000);
+}
+function stopPoll() { clearInterval(pollTimer); }
+
+// ── 현재 주 데이터 접근 ───────────────────
+function getWeekData(key) {
+  if (!allData[key]) allData[key] = emptyWeek();
+  // 멤버 누락 방지 (새 멤버 추가 시 대비)
+  for (const [t, ns] of Object.entries(MEMBERS)) {
+    if (!allData[key][t]) allData[key][t] = {};
+    for (const n of ns) {
+      if (!allData[key][t][n]) allData[key][t][n] = { status: null, sub: '' };
+    }
+  }
+  return allData[key];
+}
+
+// ── 상태 표시 ─────────────────────────────
+function setSyncStatus(s) {
+  const dot=document.getElementById('syncDot'), txt=document.getElementById('syncText');
+  const m={on:['s-on','t-on','🟢 실시간 연결됨 — 5초마다 갱신'],connecting:['s-off','t-off','🔄 연결 중...'],error:['s-err','t-err','🔴 연결 실패']};
+  const[dc,tc,msg]=m[s]||m.connecting;
+  dot.className='sdot '+dc; txt.className=tc; txt.textContent=msg;
+}
+let toastTimer=null;
+function showToast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),4000);
+}
+
+// ── 렌더 ──────────────────────────────────
+function renderWeek() {
+  const key=wKey(weekOffset);
+  const team=activeTeam(weekOffset);
+  const data=getWeekData(key);
+
+  document.getElementById('weekLabel').textContent=fmtDate(getSunday(weekOffset));
+  document.getElementById('teamBadge').innerHTML=`<span class="team-badge badge-${team}">${team}조 청소 주간</span>`;
+  ['1','2'].forEach(n=>{
+    const on=+n===team;
+    document.getElementById('duty'+n).textContent=on?'이번주 담당 ✓':'다음 주 대기';
+    document.getElementById('duty'+n).className='duty-tag '+(on?'duty-on':'duty-off');
+    document.getElementById('team'+n).classList.toggle('inactive',!on);
+  });
+
+  for(const[t,members]of Object.entries(data)){
+    for(const[name,val]of Object.entries(members)){
+      const row=document.getElementById(`row-${t}-${name}`);
+      if(!row)continue;
+      row.querySelector('.btn-o').classList.toggle('active',val.status==='O');
+      row.querySelector('.btn-x').classList.toggle('active',val.status==='X');
+      const inp=document.getElementById(`sub-${t}-${name}`);
+      if(inp){inp.value=val.sub||'';inp.classList.toggle('filled',(val.sub||'').length>0);}
+    }
+  }
+  renderSummary();
+}
+
+function renderSummary(){
+  const key=wKey(weekOffset);
+  const data=getWeekData(key);
+  const list=document.getElementById('summaryList'),bar=document.getElementById('countBar');
+  let html='',cO=0,cX=0,cS=0,added=false;
+  const all=[{t:'팀장',n:'조현민'},...MEMBERS['1조'].map(n=>({t:'1조',n})),...MEMBERS['2조'].map(n=>({t:'2조',n}))];
+  for(const{t,n}of all){
+    const val=data[t]?.[n];
+    if(!val||(val.status===null&&!val.sub))continue;
+    added=true;
+    let bc='',bt='',rc='';
+    if(val.sub?.trim()){bc='s-sub';bt=val.sub.trim();rc='row-sub';cS++;}
+    else if(val.status==='O'){bc='s-o';bt='O (참여)';rc='row-o';cO++;}
+    else if(val.status==='X'){bc='s-x';bt='X (불참)';rc='row-x';cX++;}
+    html+=`<div class="summary-item ${rc}"><span class="s-name">${n} <span style="font-size:.7rem;color:var(--gray);font-weight:400">${t}</span></span><span class="s-badge ${bc}">${bt}</span></div>`;
+  }
+  list.innerHTML=added?html:'<div class="summary-empty">아직 입력된 내용이 없습니다.</div>';
+  bar.style.display=added?'flex':'none';
+  if(added){document.getElementById('cntO').textContent=cO;document.getElementById('cntX').textContent=cX;document.getElementById('cntS').textContent=cS;}
+}
+
+// ── 이벤트 ───────────────────────────────
+function doToggle(team,name,status){
+  const key=wKey(weekOffset);
+  const data=getWeekData(key);
+  data[team][name].status = data[team][name].status===status ? null : status;
+  renderWeek();
+  debouncedSave();
+}
+function doSub(team,name,inp){
+  const key=wKey(weekOffset);
+  const data=getWeekData(key);
+  data[team][name].sub=inp.value;
+  inp.classList.toggle('filled',inp.value.length>0);
+  renderSummary();
+  debouncedSave();
+}
+
+document.getElementById('prevBtn').onclick=()=>{weekOffset--;renderWeek();};
+document.getElementById('nextBtn').onclick=()=>{weekOffset++;renderWeek();};
+
+// ── 시작 ──────────────────────────────────
+initOffset();
+loadAll().then(startPoll);
+</script>
+</body>
+</html>
