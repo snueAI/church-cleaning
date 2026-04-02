@@ -284,15 +284,29 @@ async function loadAll(){
     const j=await r.json();
     if(!r.ok) throw new Error(j.message||'읽기 실패 '+r.status);
     const rec=j.record;
-    if(rec && rec.weeks){
-      allData = { weeks: rec.weeks, subStats:{} }; // subStats는 항상 새로 계산
-    } else if(rec && !rec.init){
-      allData = { weeks: rec, subStats:{} };
+
+    // 어떤 구조로 저장되어 있든 weeks만 추출, subStats는 완전히 무시
+    let weeks = {};
+    if(rec && rec.weeks && typeof rec.weeks==='object'){
+      weeks = rec.weeks;
+    } else if(rec && typeof rec==='object' && !rec.init){
+      // 구버전: 최상위가 바로 주차 데이터인 경우
+      // subStats 키는 제외하고 날짜 키만 추출
+      for(const [k,v] of Object.entries(rec)){
+        if(k !== 'subStats' && k !== 'init') weeks[k] = v;
+      }
     }
+
+    allData = { weeks, subStats:{} }; // subStats는 절대 서버에서 불러오지 않음
     ensureSubStats();
-    recalcSubStats(); // weeks 기반으로 처음부터 계산
+    recalcSubStats(); // weeks만 보고 처음부터 계산
     setSyncStatus('on');
     renderAll();
+
+    // 서버에 오염된 subStats가 남아있으면 즉시 clean 버전으로 덮어쓰기
+    if(rec && rec.subStats){
+      saveAll(); // weeks만 담긴 깨끗한 데이터로 서버 갱신
+    }
   }catch(e){
     console.error('[loadAll]',e);
     setSyncStatus('error');
